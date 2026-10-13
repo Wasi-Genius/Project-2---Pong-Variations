@@ -1,71 +1,164 @@
+/**
+
+* Author: Wasi Genius
+
+* Assignment: Pong Clone
+
+* Date due: [10/16/2026]
+
+* I pledge that I have completed this assignment without
+
+* collaborating with anyone else, in conformance with the
+
+* NYU School of Engineering Policies and Procedures on
+
+* Academic Misconduct.
+
+**/
+
 #include "CS3113/cs3113.h"
 
-// Global Constants
-constexpr int SCREEN_WIDTH  = 1600 / 2,
-              SCREEN_HEIGHT = 900 / 2,
-              FPS           = 60,
-              SIZE          = 500 / 2,
-              SPEED         = 200;
+constexpr int SCREEN_WIDTH  = 800,
+              SCREEN_HEIGHT = 450,
+              FPS           = 60;
 
-constexpr char    BG_COLOUR[]    = "#F8F1C8";
-constexpr Vector2 ORIGIN         = { SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 },
-                  BASE_SIZE      = { static_cast<float>(SIZE), static_cast<float>(SIZE) },
-                  INIT_POS       = { ORIGIN.x - 200.0f, ORIGIN.y },
-                  RUPEE_INIT_POS = { ORIGIN.x + 250.0f, ORIGIN.y };
+constexpr float PADDLE_SPEED = 350.0f;
 
-// Images owned by Nintendo — please don't sue me.
-constexpr char LINK_FP[]  = "assets/game/awakening-link.png";
-constexpr char RUPEE_FP[] = "assets/game/awakening-rupee.png";
-constexpr char BGM_FP[]   = "assets/game/ost.mp3";
-constexpr char PICKUP_FP[] = "assets/game/rupee.mp3";
+constexpr char LEFT_PADDLE_IMAGE[] = "assets/satellite.png";
+constexpr char RIGHT_PADDLE_IMAGE[] = "assets/satellite.png";
+constexpr char BALL_IMAGE[] = "assets/astronaut.png";
+constexpr char BACKGROUND_IMAGE[] = "assets/space background.png";
+constexpr char CENTER_LINE_IMAGE[] = "assets/pong-center-line.png";
 
-// Global Variables
-AppStatus gAppStatus     = RUNNING;
-float     gAngle         = 0.0f,
-          gPreviousTicks = 0.0f;
+AppStatus gAppStatus = RUNNING;
+float gPreviousTicks = 0.0f;
 
-Vector2 gLinkPosition  = INIT_POS,
-        gLinkMovement  = { 0.0f, 0.0f },
-        gLinkScale     = BASE_SIZE,
+// Paddle Info
+Vector2 gLeftPaddlePosition = { 65.0f, SCREEN_HEIGHT / 2.0f };
+Vector2 gRightPaddlePosition = { SCREEN_WIDTH - 65.0f, SCREEN_HEIGHT / 2.0f };
+float gLeftPaddleMovement = 0.0f;
+float gRightPaddleMovement = 0.0f;
+Vector2 gPaddleDrawScale = { 100.0f, 70.0f };
+Vector2 gPaddleCollisionScale = { 70.0f, 100.0f };
 
-        gRupeePosition = RUPEE_INIT_POS,
-        gRupeeMovement = { 0.0f, 0.0f },
-        gRupeeScale    = { BASE_SIZE.x / 2.0f, BASE_SIZE.y / 2.0f * 1.6f },
+// Ball Info
+Vector2 gBallPosition = { SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f };
+Vector2 gBallMovement = { 300.0f, 180.0f };
+Vector2 gBallScale = { 58.0f, 62.0f };
 
-        gMousePosition = GetMousePosition();
+// Texture Setup
+Texture2D gLeftPaddleTexture;
+Texture2D gRightPaddleTexture;
+Texture2D gBallTexture;
+Texture2D gBackgroundTexture;
+Texture2D gCenterLineTexture;
 
-Texture2D gLinkTexture;
-Texture2D gRupeeTexture;
-Music     gBGM;
-Sound     gRupeeSound;
-
-// Function Declarations
 void initialise();
 void processInput();
 void update();
 void render();
 void shutdown();
-bool isColliding(const Vector2 *positionA, const Vector2 *scaleA, const Vector2 *positionB, const Vector2 *scaleB);
-
-// Function Definitions
-
+void drawTexture(const Texture2D *texture, const Vector2 *position,
+                 const Vector2 *scale, float rotation);
 bool isColliding(const Vector2 *positionA, const Vector2 *scaleA,
-                 const Vector2 *positionB, const Vector2 *scaleB)
+                 const Vector2 *positionB, const Vector2 *scaleB);
+
+void initialise()
 {
-    // Box-to-box (AABB) collision detection.
-    // We compare the centre-to-centre distance on each axis, minus the two
-    // half-sizes. If both overlaps are negative, the boxes intersect.
-    float xDistance = fabs(positionA->x - positionB->x) - ((scaleA->x + scaleB->x) / 2.0f);
-    float yDistance = fabs(positionA->y - positionB->y) - ((scaleA->y + scaleB->y) / 2.0f);
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Space Pong");
 
-    if (xDistance < 0.0f && yDistance < 0.0f) return true;
+    // Load textures 
+    gLeftPaddleTexture = LoadTexture(LEFT_PADDLE_IMAGE);
+    gRightPaddleTexture = LoadTexture(RIGHT_PADDLE_IMAGE);
+    gBallTexture = LoadTexture(BALL_IMAGE);
+    gBackgroundTexture = LoadTexture(BACKGROUND_IMAGE);
+    gCenterLineTexture = LoadTexture(CENTER_LINE_IMAGE);
 
-    return false;
+    SetTargetFPS(FPS);
+    gPreviousTicks = static_cast<float>(GetTime());
 }
 
-void renderObject(const Texture2D *texture, const Vector2 *position,
-                  const Vector2 *scale)
+void processInput()
 {
+
+    // Paddle Movement
+    gLeftPaddleMovement = 0.0f;
+    gRightPaddleMovement = 0.0f;
+
+    if (IsKeyDown(KEY_W)) gLeftPaddleMovement = -1.0f;
+    else if (IsKeyDown(KEY_S)) gLeftPaddleMovement = 1.0f;
+
+    if (IsKeyDown(KEY_UP)) gRightPaddleMovement = -1.0f;
+    else if (IsKeyDown(KEY_DOWN)) gRightPaddleMovement = 1.0f;
+
+    if (WindowShouldClose()) gAppStatus = TERMINATED;
+}
+
+void update()
+{
+    float ticks = static_cast<float>(GetTime());
+    float deltaTime = ticks - gPreviousTicks;
+    gPreviousTicks = ticks;
+
+    // Paddle movement
+    gLeftPaddlePosition.y += PADDLE_SPEED * gLeftPaddleMovement * deltaTime;
+    gRightPaddlePosition.y += PADDLE_SPEED * gRightPaddleMovement * deltaTime;
+
+    if (gLeftPaddlePosition.y < gPaddleCollisionScale.y / 2.0f)
+        gLeftPaddlePosition.y = gPaddleCollisionScale.y / 2.0f;
+    if (gLeftPaddlePosition.y > SCREEN_HEIGHT - gPaddleCollisionScale.y / 2.0f)
+        gLeftPaddlePosition.y = SCREEN_HEIGHT - gPaddleCollisionScale.y / 2.0f;
+
+    if (gRightPaddlePosition.y < gPaddleCollisionScale.y / 2.0f)
+        gRightPaddlePosition.y = gPaddleCollisionScale.y / 2.0f;
+    if (gRightPaddlePosition.y > SCREEN_HEIGHT - gPaddleCollisionScale.y / 2.0f)
+        gRightPaddlePosition.y = SCREEN_HEIGHT - gPaddleCollisionScale.y / 2.0f;
+
+}
+
+void render()
+{
+
+    // Background render
+    Vector2 backgroundPosition = { SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f };
+    Vector2 backgroundScale = {
+        static_cast<float>(SCREEN_WIDTH),
+        static_cast<float>(SCREEN_HEIGHT)
+    };
+
+    // Center line render
+    Vector2 centerLinePosition = { SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f };
+    Vector2 centerLineScale = { 12.0f, SCREEN_HEIGHT - 10.0f };
+
+    BeginDrawing();
+    ClearBackground(BLACK);
+
+    // Draw assets onto screen
+    drawTexture(&gBackgroundTexture, &backgroundPosition, &backgroundScale, 0.0f);
+    drawTexture(&gCenterLineTexture, &centerLinePosition, &centerLineScale, 0.0f);
+    drawTexture(&gLeftPaddleTexture, &gLeftPaddlePosition, &gPaddleDrawScale, 270.0f);
+    drawTexture(&gRightPaddleTexture, &gRightPaddlePosition, &gPaddleDrawScale, 180.0f);
+    drawTexture(&gBallTexture, &gBallPosition, &gBallScale, 0.0f);
+
+    EndDrawing();
+}
+
+void shutdown()
+{
+    //Unload assets to prevent memory leak
+    UnloadTexture(gLeftPaddleTexture);
+    UnloadTexture(gRightPaddleTexture);
+    UnloadTexture(gBallTexture);
+    UnloadTexture(gBackgroundTexture);
+    UnloadTexture(gCenterLineTexture);
+    CloseWindow();
+}
+
+// Draw texture function for organization and to avoid code duplication
+void drawTexture(const Texture2D *texture, const Vector2 *position,
+                 const Vector2 *scale, float rotation)
+{
+    
     Rectangle textureArea = {
         0.0f, 0.0f,
         static_cast<float>(texture->width),
@@ -75,122 +168,20 @@ void renderObject(const Texture2D *texture, const Vector2 *position,
     Rectangle destinationArea = {
         position->x,
         position->y,
-        static_cast<float>(scale->x),
-        static_cast<float>(scale->y)
+        scale->x,
+        scale->y
     };
 
-    Vector2 originOffset = {
-        static_cast<float>(scale->x) / 2.0f,
-        static_cast<float>(scale->y) / 2.0f
-    };
+    Vector2 originOffset = { scale->x / 2.0f, scale->y / 2.0f };
 
     DrawTexturePro(
         *texture,
-        textureArea, destinationArea, originOffset,
-        gAngle, WHITE
+        textureArea,
+        destinationArea,
+        originOffset,
+        rotation,
+        WHITE
     );
-}
-
-void initialise()
-{
-    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "User Input / Collision Detection");
-    InitAudioDevice();
-
-    gLinkTexture  = LoadTexture(LINK_FP);
-    gRupeeTexture = LoadTexture(RUPEE_FP);
-    gBGM          = LoadMusicStream(BGM_FP);
-    gRupeeSound   = LoadSound(PICKUP_FP);
-
-    SetMusicVolume(gBGM, 0.33f);
-    PlayMusicStream(gBGM);
-
-    SetTargetFPS(FPS);
-}
-
-void processInput()
-{
-    // Reset the movement vector each frame so movement stops when the player
-    // releases the keys or stops holding the mouse button.
-    gLinkMovement = { 0.0f, 0.0f };
-
-    // WASD movement: each axis gets a direction of -1, 0, or 1.
-    // We use else-if so only one horizontal and one vertical direction can win
-    // at a time (matching the normal "key press" feel in the tutorial).
-    if      (IsKeyDown(KEY_A)) gLinkMovement.x = -1.0f;
-    else if (IsKeyDown(KEY_D)) gLinkMovement.x =  1.0f;
-
-    if      (IsKeyDown(KEY_W)) gLinkMovement.y = -1.0f;
-    else if (IsKeyDown(KEY_S)) gLinkMovement.y =  1.0f;
-
-    // Mouse-controlled movement: while the left mouse button is held, Link
-    // moves toward the current mouse position. We compare the current position to
-    // the mouse position and set a directional sign for each axis.
-    if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
-    {
-        if (gLinkPosition.x < gMousePosition.x) gLinkMovement.x =  1.0f;
-        if (gLinkPosition.x > gMousePosition.x) gLinkMovement.x = -1.0f;
-        if (gLinkPosition.y < gMousePosition.y) gLinkMovement.y =  1.0f;
-        if (gLinkPosition.y > gMousePosition.y) gLinkMovement.y = -1.0f;
-    }
-
-    // Prevent diagonal movement from being faster than cardinal movement.
-    // If the vector length is greater than 1, we reduce it to a unit vector.
-    if (GetLength(&gLinkMovement) > 1.0f) Normalise(&gLinkMovement);
-
-    if (IsKeyPressed(KEY_Q) || WindowShouldClose()) gAppStatus = TERMINATED;
-}
-
-void update()
-{
-    float ticks    = static_cast<float>(GetTime());
-    float deltaTime = ticks - gPreviousTicks;
-    gPreviousTicks  = ticks;
-
-    // Keep the background music streaming smoothly every frame.
-    UpdateMusicStream(gBGM);
-
-    // Update the mouse position every frame so our click-to-move input stays
-    // responsive and always uses the current cursor location.
-    gMousePosition = GetMousePosition();
-
-    // Move Link by the current input direction, scaled by speed and by the time
-    // passed since the last frame. This keeps movement consistent at different
-    // frame rates.
-    gLinkPosition = {
-        gLinkPosition.x + SPEED * gLinkMovement.x * deltaTime,
-        gLinkPosition.y + SPEED * gLinkMovement.y * deltaTime
-    };
-
-    // Check whether Link intersects the rupee's bounding box. This is a simple
-    // box-to-box collision test using the object positions and scales.
-    if (isColliding(&gLinkPosition, &gLinkScale, &gRupeePosition, &gRupeeScale))
-    {
-        // Play the pickup sound only once per collision window so the effect does
-        // not restart every frame while Link is still touching the rupee.
-        if (!IsSoundPlaying(gRupeeSound)) PlaySound(gRupeeSound);
-    }
-}
-
-void render()
-{
-    BeginDrawing();
-    ClearBackground(ColorFromHex(BG_COLOUR));
-
-    renderObject(&gLinkTexture,  &gLinkPosition,  &gLinkScale);
-    renderObject(&gRupeeTexture, &gRupeePosition, &gRupeeScale);
-
-    EndDrawing();
-}
-
-void shutdown()
-{
-    StopMusicStream(gBGM);
-    UnloadMusicStream(gBGM);
-    UnloadSound(gRupeeSound);
-    UnloadTexture(gLinkTexture);
-    UnloadTexture(gRupeeTexture);
-    CloseAudioDevice();
-    CloseWindow();
 }
 
 int main(void)
