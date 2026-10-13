@@ -53,13 +53,16 @@ Texture2D gBallTexture;
 Texture2D gBackgroundTexture;
 Texture2D gCenterLineTexture;
 
+// Function declarations 
 void initialise();
 void processInput();
 void update();
 void render();
 void shutdown();
+
 void drawTexture(const Texture2D *texture, const Vector2 *position,
                  const Vector2 *scale, float rotation);
+
 bool isColliding(const Vector2 *positionA, const Vector2 *scaleA,
                  const Vector2 *positionB, const Vector2 *scaleB);
 
@@ -158,7 +161,7 @@ void shutdown()
 void drawTexture(const Texture2D *texture, const Vector2 *position,
                  const Vector2 *scale, float rotation)
 {
-    
+
     Rectangle textureArea = {
         0.0f, 0.0f,
         static_cast<float>(texture->width),
@@ -182,6 +185,22 @@ void drawTexture(const Texture2D *texture, const Vector2 *position,
         rotation,
         WHITE
     );
+}
+
+
+// Check for collision between two objects
+bool isColliding(const Vector2 *positionA, const Vector2 *scaleA,
+                 const Vector2 *positionB, const Vector2 *scaleB)
+{
+    float xDistance = 
+    fabs(positionA->x - positionB->x) - ((scaleA->x + scaleB->x) / 2.0f);
+
+    float yDistance = 
+    fabs(positionA->y - positionB->y) - ((scaleA->y + scaleB->y) / 2.0f);
+
+    if (xDistance < 0.0f && yDistance < 0.0f) return true;
+
+    return false;
 }
 
 int main(void)
