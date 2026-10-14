@@ -142,8 +142,7 @@ void update()
 
     // Check if the ball is moving left and collides with the left paddle
     if (gBallMovement.x < 0.0f &&
-        isColliding(&gBallPosition, &gBallScale,
-                    &gLeftPaddlePosition, &gPaddleCollisionScale))
+        isColliding(&gBallPosition, &gBallScale, &gLeftPaddlePosition, &gPaddleCollisionScale))
     {
         // Prevent clipping into left paddle
         gBallPosition.x = gLeftPaddlePosition.x + (gPaddleCollisionScale.x + gBallScale.x) / 2.0f;
@@ -153,12 +152,24 @@ void update()
 
     // Check if the ball is moving right and collides with the right paddle
     else if (gBallMovement.x > 0.0f &&
-             isColliding(&gBallPosition, &gBallScale,
-                         &gRightPaddlePosition, &gPaddleCollisionScale))
+             isColliding(&gBallPosition, &gBallScale, &gRightPaddlePosition, &gPaddleCollisionScale))
     {
         // Prevent clipping into right paddle
         gBallPosition.x = gRightPaddlePosition.x - (gPaddleCollisionScale.x + gBallScale.x) / 2.0f;
 
+        gBallMovement.x = -fabs(gBallMovement.x);
+    }
+
+    // Check if ball goes past left side of screen and reset position
+    if (gBallPosition.x < -gBallScale.x / 2.0f)
+    {
+        gBallPosition = { SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f };
+        gBallMovement.x = fabs(gBallMovement.x);
+    }
+    // Check if ball goes past right side of screen and reset position
+    else if (gBallPosition.x > SCREEN_WIDTH + gBallScale.x / 2.0f)
+    {
+        gBallPosition = { SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f };
         gBallMovement.x = -fabs(gBallMovement.x);
     }
 
