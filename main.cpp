@@ -49,7 +49,9 @@ Vector2 gBallScale = { 58.0f, 62.0f };
 // Texture Setup
 Texture2D gLeftPaddleTexture;
 Texture2D gRightPaddleTexture;
+
 Texture2D gBallTexture;
+
 Texture2D gBackgroundTexture;
 Texture2D gCenterLineTexture;
 
@@ -73,7 +75,9 @@ void initialise()
     // Load textures 
     gLeftPaddleTexture = LoadTexture(LEFT_PADDLE_IMAGE);
     gRightPaddleTexture = LoadTexture(RIGHT_PADDLE_IMAGE);
+
     gBallTexture = LoadTexture(BALL_IMAGE);
+
     gBackgroundTexture = LoadTexture(BACKGROUND_IMAGE);
     gCenterLineTexture = LoadTexture(CENTER_LINE_IMAGE);
 
@@ -109,13 +113,54 @@ void update()
 
     if (gLeftPaddlePosition.y < gPaddleCollisionScale.y / 2.0f)
         gLeftPaddlePosition.y = gPaddleCollisionScale.y / 2.0f;
+
     if (gLeftPaddlePosition.y > SCREEN_HEIGHT - gPaddleCollisionScale.y / 2.0f)
         gLeftPaddlePosition.y = SCREEN_HEIGHT - gPaddleCollisionScale.y / 2.0f;
 
     if (gRightPaddlePosition.y < gPaddleCollisionScale.y / 2.0f)
         gRightPaddlePosition.y = gPaddleCollisionScale.y / 2.0f;
+
     if (gRightPaddlePosition.y > SCREEN_HEIGHT - gPaddleCollisionScale.y / 2.0f)
         gRightPaddlePosition.y = SCREEN_HEIGHT - gPaddleCollisionScale.y / 2.0f;
+
+    // Ball movement 
+    gBallPosition.x += gBallMovement.x * deltaTime;
+    gBallPosition.y += gBallMovement.y * deltaTime;
+
+    // Check if the ball hits or goes past the top of the screen
+    if (gBallPosition.y < gBallScale.y / 2.0f)
+    {
+        gBallPosition.y = gBallScale.y / 2.0f;
+        gBallMovement.y = fabs(gBallMovement.y);
+    }
+    // Check if the ball hits or goes past the bottom of the screen
+    else if (gBallPosition.y > SCREEN_HEIGHT - gBallScale.y / 2.0f)
+    {
+        gBallPosition.y = SCREEN_HEIGHT - gBallScale.y / 2.0f;
+        gBallMovement.y = -fabs(gBallMovement.y);
+    }
+
+    // Check if the ball is moving left and collides with the left paddle
+    if (gBallMovement.x < 0.0f &&
+        isColliding(&gBallPosition, &gBallScale,
+                    &gLeftPaddlePosition, &gPaddleCollisionScale))
+    {
+        // Prevent clipping into left paddle
+        gBallPosition.x = gLeftPaddlePosition.x + (gPaddleCollisionScale.x + gBallScale.x) / 2.0f;
+
+        gBallMovement.x = fabs(gBallMovement.x);
+    }
+
+    // Check if the ball is moving right and collides with the right paddle
+    else if (gBallMovement.x > 0.0f &&
+             isColliding(&gBallPosition, &gBallScale,
+                         &gRightPaddlePosition, &gPaddleCollisionScale))
+    {
+        // Prevent clipping into right paddle
+        gBallPosition.x = gRightPaddlePosition.x - (gPaddleCollisionScale.x + gBallScale.x) / 2.0f;
+
+        gBallMovement.x = -fabs(gBallMovement.x);
+    }
 
 }
 
@@ -125,8 +170,10 @@ void render()
     // Background render
     Vector2 backgroundPosition = { SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f };
     Vector2 backgroundScale = {
+
         static_cast<float>(SCREEN_WIDTH),
         static_cast<float>(SCREEN_HEIGHT)
+
     };
 
     // Center line render
@@ -139,8 +186,10 @@ void render()
     // Draw assets onto screen
     drawTexture(&gBackgroundTexture, &backgroundPosition, &backgroundScale, 0.0f);
     drawTexture(&gCenterLineTexture, &centerLinePosition, &centerLineScale, 0.0f);
+
     drawTexture(&gLeftPaddleTexture, &gLeftPaddlePosition, &gPaddleDrawScale, 270.0f);
     drawTexture(&gRightPaddleTexture, &gRightPaddlePosition, &gPaddleDrawScale, 180.0f);
+
     drawTexture(&gBallTexture, &gBallPosition, &gBallScale, 0.0f);
 
     EndDrawing();
@@ -185,6 +234,7 @@ void drawTexture(const Texture2D *texture, const Vector2 *position,
         rotation,
         WHITE
     );
+
 }
 
 
