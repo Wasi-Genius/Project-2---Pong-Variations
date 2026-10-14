@@ -36,8 +36,14 @@ float gPreviousTicks = 0.0f;
 // Paddle Info
 Vector2 gLeftPaddlePosition = { 65.0f, SCREEN_HEIGHT / 2.0f };
 Vector2 gRightPaddlePosition = { SCREEN_WIDTH - 65.0f, SCREEN_HEIGHT / 2.0f };
+
 float gLeftPaddleMovement = 0.0f;
 float gRightPaddleMovement = 0.0f;
+
+// Right paddle bot into 
+float gRightBotMovement = -1.0f;
+bool gRightPaddleIsBot = false;
+
 Vector2 gPaddleDrawScale = { 100.0f, 70.0f };
 Vector2 gPaddleCollisionScale = { 70.0f, 100.0f };
 
@@ -92,11 +98,16 @@ void processInput()
     gLeftPaddleMovement = 0.0f;
     gRightPaddleMovement = 0.0f;
 
+    if (IsKeyPressed(KEY_T)) gRightPaddleIsBot = !gRightPaddleIsBot;
+
     if (IsKeyDown(KEY_W)) gLeftPaddleMovement = -1.0f;
     else if (IsKeyDown(KEY_S)) gLeftPaddleMovement = 1.0f;
 
-    if (IsKeyDown(KEY_UP)) gRightPaddleMovement = -1.0f;
-    else if (IsKeyDown(KEY_DOWN)) gRightPaddleMovement = 1.0f;
+    if (!gRightPaddleIsBot)
+    {
+        if (IsKeyDown(KEY_UP)) gRightPaddleMovement = -1.0f;
+        else if (IsKeyDown(KEY_DOWN)) gRightPaddleMovement = 1.0f;
+    }
 
     if (WindowShouldClose()) gAppStatus = TERMINATED;
 }
@@ -109,19 +120,37 @@ void update()
 
     // Paddle movement
     gLeftPaddlePosition.y += PADDLE_SPEED * gLeftPaddleMovement * deltaTime;
+
+    // Create movement for the bot 
+    if (gRightPaddleIsBot)
+        gRightPaddleMovement = gRightBotMovement;
+
     gRightPaddlePosition.y += PADDLE_SPEED * gRightPaddleMovement * deltaTime;
 
+    // Keep left paddle from moving off the top edge of the screen
     if (gLeftPaddlePosition.y < gPaddleCollisionScale.y / 2.0f)
         gLeftPaddlePosition.y = gPaddleCollisionScale.y / 2.0f;
 
+    // Keep left paddle from moving off the bottom edge of the screen
     if (gLeftPaddlePosition.y > SCREEN_HEIGHT - gPaddleCollisionScale.y / 2.0f)
         gLeftPaddlePosition.y = SCREEN_HEIGHT - gPaddleCollisionScale.y / 2.0f;
 
+    // Keep right paddle from moving off the top edge of the screen 
     if (gRightPaddlePosition.y < gPaddleCollisionScale.y / 2.0f)
+    {
         gRightPaddlePosition.y = gPaddleCollisionScale.y / 2.0f;
+        // Bounce the bot downward if it hits the top edge
+        if (gRightPaddleIsBot) gRightBotMovement = 1.0f;
+    }
 
+    // Keep right paddle from moving off the bottom edge of the screen 
     if (gRightPaddlePosition.y > SCREEN_HEIGHT - gPaddleCollisionScale.y / 2.0f)
+    {
         gRightPaddlePosition.y = SCREEN_HEIGHT - gPaddleCollisionScale.y / 2.0f;
+        
+        // Bounce the bot upward if it hits the bottom edge
+        if (gRightPaddleIsBot) gRightBotMovement = -1.0f;
+    }
 
     // Ball movement 
     gBallPosition.x += gBallMovement.x * deltaTime;
