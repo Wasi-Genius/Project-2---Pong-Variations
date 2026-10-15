@@ -24,6 +24,7 @@ constexpr int SCREEN_WIDTH  = 800,
               MAX_BALLS     = 5;
 
 constexpr float PADDLE_SPEED = 350.0f;
+constexpr int POINTS_PER_BALL_TO_WIN = 3;
 
 constexpr char LEFT_PADDLE_IMAGE[] = "assets/satellite.png";
 constexpr char RIGHT_PADDLE_IMAGE[] = "assets/satellite.png";
@@ -33,6 +34,12 @@ constexpr char CENTER_LINE_IMAGE[] = "assets/pong-center-line.png";
 
 AppStatus gAppStatus = RUNNING;
 float gPreviousTicks = 0.0f;
+
+// Scoring tracker
+int gLeftScore = 0;
+int gRightScore = 0;
+int gWinningScore = POINTS_PER_BALL_TO_WIN;
+bool gGameOver = false;
 
 // Paddle Info
 Vector2 gLeftPaddlePosition = { 65.0f, SCREEN_HEIGHT / 2.0f };
@@ -266,6 +273,13 @@ void shutdown()
 void setBallCount(int ballCount)
 {
     gBallCount = ballCount;
+
+    // Each ball adds three points to the required scores and changing the count resets the scores
+    gWinningScore = gBallCount * POINTS_PER_BALL_TO_WIN;
+    gLeftScore = 0;
+    gRightScore = 0;
+    gGameOver = false;
+
     for (int i = 0; i < gBallCount; i++)
     {
         gBallPositions[i].x = SCREEN_WIDTH / 2.0f;

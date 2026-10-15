@@ -79,8 +79,9 @@ To keep things simple, I'd recommend using box-to-box collision detection only.
 
 Work object by object, mechanic by mechanic, and test often. This goes for all programming, but if you try finishing all objects in one go, you are bound to miss something that has a hard time finding it.
 
+---------------------------------------------------
+
 Extra Credit
 Have fun with it and have a theme.
-
 
 Have an endgame UI message. When someone wins, you can show an image of text saying who won.
