@@ -20,7 +20,8 @@
 
 constexpr int SCREEN_WIDTH  = 800,
               SCREEN_HEIGHT = 450,
-              FPS           = 60;
+              FPS           = 60,
+              MAX_BALLS     = 5;
 
 constexpr float PADDLE_SPEED = 350.0f;
 
@@ -40,7 +41,6 @@ Vector2 gRightPaddlePosition = { SCREEN_WIDTH - 65.0f, SCREEN_HEIGHT / 2.0f };
 float gLeftPaddleMovement = 0.0f;
 float gRightPaddleMovement = 0.0f;
 
-// Right paddle bot into 
 float gRightBotMovement = -1.0f;
 bool gRightPaddleIsBot = false;
 
@@ -48,8 +48,15 @@ Vector2 gPaddleDrawScale = { 100.0f, 70.0f };
 Vector2 gPaddleCollisionScale = { 70.0f, 100.0f };
 
 // Ball Info
-Vector2 gBallPosition = { SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f };
-Vector2 gBallMovement = { 300.0f, 180.0f };
+int gBallCount = 1;
+Vector2 gBallPositions[MAX_BALLS];
+Vector2 gBallMovements[MAX_BALLS] = {
+    { 300.0f, 180.0f },
+    { -300.0f, -140.0f },
+    { 320.0f, 120.0f },
+    { -280.0f, 200.0f },
+    { 340.0f, -180.0f }
+};
 Vector2 gBallScale = { 58.0f, 62.0f };
 
 // Texture Setup
@@ -67,6 +74,7 @@ void processInput();
 void update();
 void render();
 void shutdown();
+void setBallCount(int ballCount);
 
 void drawTexture(const Texture2D *texture, const Vector2 *position,
                  const Vector2 *scale, float rotation);
@@ -87,6 +95,8 @@ void initialise()
     gBackgroundTexture = LoadTexture(BACKGROUND_IMAGE);
     gCenterLineTexture = LoadTexture(CENTER_LINE_IMAGE);
 
+    setBallCount(gBallCount);
+
     SetTargetFPS(FPS);
     gPreviousTicks = static_cast<float>(GetTime());
 }
@@ -98,7 +108,15 @@ void processInput()
     gLeftPaddleMovement = 0.0f;
     gRightPaddleMovement = 0.0f;
 
+    // T switches the right paddle between the second player and the bot.
     if (IsKeyPressed(KEY_T)) gRightPaddleIsBot = !gRightPaddleIsBot;
+
+    // Choose how number of balls, setBallCount also places them on screen.
+    if (IsKeyPressed(KEY_ONE)) setBallCount(1);
+    else if (IsKeyPressed(KEY_TWO)) setBallCount(2);
+    else if (IsKeyPressed(KEY_THREE)) setBallCount(3);
+    else if (IsKeyPressed(KEY_FOUR)) setBallCount(4);
+    else if (IsKeyPressed(KEY_FIVE)) setBallCount(5);
 
     if (IsKeyDown(KEY_W)) gLeftPaddleMovement = -1.0f;
     else if (IsKeyDown(KEY_S)) gLeftPaddleMovement = 1.0f;
@@ -121,7 +139,6 @@ void update()
     // Paddle movement
     gLeftPaddlePosition.y += PADDLE_SPEED * gLeftPaddleMovement * deltaTime;
 
-    // Create movement for the bot 
     if (gRightPaddleIsBot)
         gRightPaddleMovement = gRightBotMovement;
 
@@ -152,56 +169,6 @@ void update()
         if (gRightPaddleIsBot) gRightBotMovement = -1.0f;
     }
 
-    // Ball movement 
-    gBallPosition.x += gBallMovement.x * deltaTime;
-    gBallPosition.y += gBallMovement.y * deltaTime;
-
-    // Check if the ball hits or goes past the top of the screen
-    if (gBallPosition.y < gBallScale.y / 2.0f)
-    {
-        gBallPosition.y = gBallScale.y / 2.0f;
-        gBallMovement.y = fabs(gBallMovement.y);
-    }
-    // Check if the ball hits or goes past the bottom of the screen
-    else if (gBallPosition.y > SCREEN_HEIGHT - gBallScale.y / 2.0f)
-    {
-        gBallPosition.y = SCREEN_HEIGHT - gBallScale.y / 2.0f;
-        gBallMovement.y = -fabs(gBallMovement.y);
-    }
-
-    // Check if the ball is moving left and collides with the left paddle
-    if (gBallMovement.x < 0.0f &&
-        isColliding(&gBallPosition, &gBallScale, &gLeftPaddlePosition, &gPaddleCollisionScale))
-    {
-        // Prevent clipping into left paddle
-        gBallPosition.x = gLeftPaddlePosition.x + (gPaddleCollisionScale.x + gBallScale.x) / 2.0f;
-
-        gBallMovement.x = fabs(gBallMovement.x);
-    }
-
-    // Check if the ball is moving right and collides with the right paddle
-    else if (gBallMovement.x > 0.0f &&
-             isColliding(&gBallPosition, &gBallScale, &gRightPaddlePosition, &gPaddleCollisionScale))
-    {
-        // Prevent clipping into right paddle
-        gBallPosition.x = gRightPaddlePosition.x - (gPaddleCollisionScale.x + gBallScale.x) / 2.0f;
-
-        gBallMovement.x = -fabs(gBallMovement.x);
-    }
-
-    // Check if ball goes past left side of screen and reset position
-    if (gBallPosition.x < -gBallScale.x / 2.0f)
-    {
-        gBallPosition = { SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f };
-        gBallMovement.x = fabs(gBallMovement.x);
-    }
-    // Check if ball goes past right side of screen and reset position
-    else if (gBallPosition.x > SCREEN_WIDTH + gBallScale.x / 2.0f)
-    {
-        gBallPosition = { SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f };
-        gBallMovement.x = -fabs(gBallMovement.x);
-    }
-
 }
 
 void render()
@@ -230,7 +197,8 @@ void render()
     drawTexture(&gLeftPaddleTexture, &gLeftPaddlePosition, &gPaddleDrawScale, 270.0f);
     drawTexture(&gRightPaddleTexture, &gRightPaddlePosition, &gPaddleDrawScale, 180.0f);
 
-    drawTexture(&gBallTexture, &gBallPosition, &gBallScale, 0.0f);
+    for (int i = 0; i < gBallCount; i++)
+        drawTexture(&gBallTexture, &gBallPositions[i], &gBallScale, 0.0f);
 
     EndDrawing();
 }
@@ -244,6 +212,17 @@ void shutdown()
     UnloadTexture(gBackgroundTexture);
     UnloadTexture(gCenterLineTexture);
     CloseWindow();
+}
+
+void setBallCount(int ballCount)
+{
+    gBallCount = ballCount;
+    for (int i = 0; i < gBallCount; i++)
+    {
+        gBallPositions[i].x = SCREEN_WIDTH / 2.0f;
+        // Spread the  balls vertically around the line for visibility.
+        gBallPositions[i].y = SCREEN_HEIGHT / 2.0f + (i - (gBallCount - 1) / 2.0f) * 75.0f;
+    }
 }
 
 // Draw texture function for organization and to avoid code duplication
