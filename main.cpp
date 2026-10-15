@@ -291,8 +291,8 @@ void render()
     drawTexture(&gBackgroundTexture, &backgroundPosition, &backgroundScale, 0.0f);
     drawTexture(&gCenterLineTexture, &centerLinePosition, &centerLineScale, 0.0f);
 
-    drawScore(0, SCREEN_WIDTH / 4.0f);
-    drawScore(0, SCREEN_WIDTH * 3.0f / 4.0f);
+    drawScore(gLeftScore, SCREEN_WIDTH / 4.0f);
+    drawScore(gRightScore, SCREEN_WIDTH * 3.0f / 4.0f);
 
     drawTexture(&gLeftPaddleTexture, &gLeftPaddlePosition, &gPaddleDrawScale, 270.0f);
     drawTexture(&gRightPaddleTexture, &gRightPaddlePosition, &gPaddleDrawScale, 180.0f);
