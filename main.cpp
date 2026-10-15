@@ -115,6 +115,15 @@ void processInput()
     gLeftPaddleMovement = 0.0f;
     gRightPaddleMovement = 0.0f;
 
+    if (WindowShouldClose())
+    {
+        gAppStatus = TERMINATED;
+        return;
+    }
+
+    // Ignore gameplay input after the winning score
+    if (gGameOver) return;
+
     // T switches the right paddle between the second player and the bot.
     if (IsKeyPressed(KEY_T)) gRightPaddleIsBot = !gRightPaddleIsBot;
 
@@ -134,7 +143,6 @@ void processInput()
         else if (IsKeyDown(KEY_DOWN)) gRightPaddleMovement = 1.0f;
     }
 
-    if (WindowShouldClose()) gAppStatus = TERMINATED;
 }
 
 void update()
@@ -142,6 +150,18 @@ void update()
     float ticks = static_cast<float>(GetTime());
     float deltaTime = ticks - gPreviousTicks;
     gPreviousTicks = ticks;
+
+    // Set the game over state where assets are frozen
+    if (gGameOver)
+    {
+        gBallCount = 1;
+        gBallPositions[0] = { SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f };
+        gBallMovements[0] = { 0.0f, 0.0f };
+        gLeftPaddleMovement = 0.0f;
+        gRightPaddleMovement = 0.0f;
+
+        return;
+    }
 
     // Paddle movement
     gLeftPaddlePosition.y += PADDLE_SPEED * gLeftPaddleMovement * deltaTime;
@@ -229,7 +249,7 @@ void update()
         {
           
             gLeftScore++;
-            
+
             gBallPositions[i].x = SCREEN_WIDTH / 2.0f;
             gBallPositions[i].y = SCREEN_HEIGHT / 2.0f;
             gBallMovements[i].x = -fabs(gBallMovements[i].x);
