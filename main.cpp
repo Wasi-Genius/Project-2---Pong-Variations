@@ -169,6 +169,55 @@ void update()
         if (gRightPaddleIsBot) gRightBotMovement = -1.0f;
     }
 
+    // Update active balls and each one moves and collides independently
+    for (int i = 0; i < gBallCount; i++)
+    {
+        gBallPositions[i].x += gBallMovements[i].x * deltaTime;
+        gBallPositions[i].y += gBallMovements[i].y * deltaTime;
+
+        // Keep each ball on screen and reverse its vertical direction if it hits a wall
+        if (gBallPositions[i].y < gBallScale.y / 2.0f)
+        {
+            gBallPositions[i].y = gBallScale.y / 2.0f;
+            gBallMovements[i].y = fabs(gBallMovements[i].y);
+        }
+        else if (gBallPositions[i].y > SCREEN_HEIGHT - gBallScale.y / 2.0f)
+        {
+            gBallPositions[i].y = SCREEN_HEIGHT - gBallScale.y / 2.0f;
+            gBallMovements[i].y = -fabs(gBallMovements[i].y);
+        }
+
+        // Check the paddle in the direction the  ball is traveling
+        if (gBallMovements[i].x < 0.0f &&
+            isColliding(&gBallPositions[i], &gBallScale,
+            &gLeftPaddlePosition, &gPaddleCollisionScale))
+        {
+            gBallPositions[i].x = gLeftPaddlePosition.x + (gPaddleCollisionScale.x + gBallScale.x) / 2.0f;
+            gBallMovements[i].x = fabs(gBallMovements[i].x);
+        }
+        else if (gBallMovements[i].x > 0.0f &&
+                 isColliding(&gBallPositions[i], &gBallScale,
+                &gRightPaddlePosition, &gPaddleCollisionScale))
+        {
+            gBallPositions[i].x = gRightPaddlePosition.x - (gPaddleCollisionScale.x + gBallScale.x) / 2.0f;
+            gBallMovements[i].x = -fabs(gBallMovements[i].x);
+        }
+
+        // When a ball passes a paddle, reset it to the center toward
+        if (gBallPositions[i].x < -gBallScale.x / 2.0f)
+        {
+            gBallPositions[i].x = SCREEN_WIDTH / 2.0f;
+            gBallPositions[i].y = SCREEN_HEIGHT / 2.0f;
+            gBallMovements[i].x = fabs(gBallMovements[i].x);
+        }
+        else if (gBallPositions[i].x > SCREEN_WIDTH + gBallScale.x / 2.0f)
+        {
+            gBallPositions[i].x = SCREEN_WIDTH / 2.0f;
+            gBallPositions[i].y = SCREEN_HEIGHT / 2.0f;
+            gBallMovements[i].x = -fabs(gBallMovements[i].x);
+        }
+    }
+
 }
 
 void render()
