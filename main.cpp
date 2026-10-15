@@ -31,6 +31,7 @@ constexpr char RIGHT_PADDLE_IMAGE[] = "assets/satellite.png";
 constexpr char BALL_IMAGE[] = "assets/astronaut.png";
 constexpr char BACKGROUND_IMAGE[] = "assets/space background.png";
 constexpr char CENTER_LINE_IMAGE[] = "assets/pong-center-line.png";
+constexpr char SCORE_SHEET_IMAGE[] = "assets/Score Number Sprite Sheet.png";
 
 AppStatus gAppStatus = RUNNING;
 float gPreviousTicks = 0.0f;
@@ -74,6 +75,7 @@ Texture2D gBallTexture;
 
 Texture2D gBackgroundTexture;
 Texture2D gCenterLineTexture;
+Texture2D gScoreSheetTexture;
 
 // Function declarations 
 void initialise();
@@ -82,6 +84,7 @@ void update();
 void render();
 void shutdown();
 void setBallCount(int ballCount);
+void drawScore(int score, float xPosition);
 
 void drawTexture(const Texture2D *texture, const Vector2 *position,
                  const Vector2 *scale, float rotation);
@@ -101,6 +104,7 @@ void initialise()
 
     gBackgroundTexture = LoadTexture(BACKGROUND_IMAGE);
     gCenterLineTexture = LoadTexture(CENTER_LINE_IMAGE);
+    gScoreSheetTexture = LoadTexture(SCORE_SHEET_IMAGE);
 
     setBallCount(gBallCount);
 
@@ -287,6 +291,9 @@ void render()
     drawTexture(&gBackgroundTexture, &backgroundPosition, &backgroundScale, 0.0f);
     drawTexture(&gCenterLineTexture, &centerLinePosition, &centerLineScale, 0.0f);
 
+    drawScore(0, SCREEN_WIDTH / 4.0f);
+    drawScore(0, SCREEN_WIDTH * 3.0f / 4.0f);
+
     drawTexture(&gLeftPaddleTexture, &gLeftPaddlePosition, &gPaddleDrawScale, 270.0f);
     drawTexture(&gRightPaddleTexture, &gRightPaddlePosition, &gPaddleDrawScale, 180.0f);
 
@@ -304,6 +311,7 @@ void shutdown()
     UnloadTexture(gBallTexture);
     UnloadTexture(gBackgroundTexture);
     UnloadTexture(gCenterLineTexture);
+    UnloadTexture(gScoreSheetTexture);
     CloseWindow();
 }
 
@@ -323,6 +331,37 @@ void setBallCount(int ballCount)
         // Spread the  balls vertically around the line for visibility.
         gBallPositions[i].y = SCREEN_HEIGHT / 2.0f + (i - (gBallCount - 1) / 2.0f) * 75.0f;
     }
+}
+
+// Draw the score using score sprite sheet
+void drawScore(int score, float xPosition)
+{
+    float spriteWidth = static_cast<float>(gScoreSheetTexture.width) / 16.0f;
+
+    Rectangle sourceArea = {
+        spriteWidth * score,
+        168.0f,
+        spriteWidth,
+        34.0f
+    };
+
+    Rectangle destinationArea = {
+        xPosition,
+        34.0f,
+        54.0f,
+        48.0f
+    };
+
+    Vector2 originOffset = { 27.0f, 24.0f };
+
+    DrawTexturePro(
+        gScoreSheetTexture,
+        sourceArea,
+        destinationArea,
+        originOffset,
+        0.0f,
+        WHITE
+    );
 }
 
 // Draw texture function for organization and to avoid code duplication
