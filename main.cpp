@@ -213,15 +213,32 @@ void update()
         // When a ball passes a paddle, reset it to the center toward
         if (gBallPositions[i].x < -gBallScale.x / 2.0f)
         {
+            gRightScore++;
+
             gBallPositions[i].x = SCREEN_WIDTH / 2.0f;
             gBallPositions[i].y = SCREEN_HEIGHT / 2.0f;
             gBallMovements[i].x = fabs(gBallMovements[i].x);
+
+            if (gRightScore >= gWinningScore)
+            {
+                gGameOver = true;
+                break;
+            }
         }
         else if (gBallPositions[i].x > SCREEN_WIDTH + gBallScale.x / 2.0f)
         {
+          
+            gLeftScore++;
+            
             gBallPositions[i].x = SCREEN_WIDTH / 2.0f;
             gBallPositions[i].y = SCREEN_HEIGHT / 2.0f;
             gBallMovements[i].x = -fabs(gBallMovements[i].x);
+
+            if (gLeftScore >= gWinningScore)
+            {
+                gGameOver = true;
+                break;
+            }
         }
     }
 
