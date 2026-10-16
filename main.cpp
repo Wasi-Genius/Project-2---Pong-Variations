@@ -18,10 +18,10 @@
 
 #include "CS3113/cs3113.h"
 
-constexpr int SCREEN_WIDTH  = 800,
+constexpr int SCREEN_WIDTH = 800,
               SCREEN_HEIGHT = 450,
-              FPS           = 60,
-              MAX_BALLS     = 5;
+              FPS = 60,
+              MAX_BALLS = 5;
 
 constexpr float PADDLE_SPEED = 350.0f;
 constexpr int POINTS_PER_BALL_TO_WIN = 3;
@@ -32,6 +32,7 @@ constexpr char BALL_IMAGE[] = "assets/astronaut.png";
 constexpr char BACKGROUND_IMAGE[] = "assets/space background.png";
 constexpr char CENTER_LINE_IMAGE[] = "assets/pong-center-line.png";
 constexpr char SCORE_SHEET_IMAGE[] = "assets/Score Number Sprite Sheet.png";
+constexpr char END_SCREEN_IMAGE[] = "assets/End Screen Message.png";
 
 AppStatus gAppStatus = RUNNING;
 float gPreviousTicks = 0.0f;
@@ -43,8 +44,8 @@ int gWinningScore = POINTS_PER_BALL_TO_WIN;
 bool gGameOver = false;
 
 // Paddle Info
-Vector2 gLeftPaddlePosition = { 65.0f, SCREEN_HEIGHT / 2.0f };
-Vector2 gRightPaddlePosition = { SCREEN_WIDTH - 65.0f, SCREEN_HEIGHT / 2.0f };
+Vector2 gLeftPaddlePosition = {65.0f, SCREEN_HEIGHT / 2.0f};
+Vector2 gRightPaddlePosition = {SCREEN_WIDTH - 65.0f, SCREEN_HEIGHT / 2.0f};
 
 float gLeftPaddleMovement = 0.0f;
 float gRightPaddleMovement = 0.0f;
@@ -52,20 +53,20 @@ float gRightPaddleMovement = 0.0f;
 float gRightBotMovement = -1.0f;
 bool gRightPaddleIsBot = false;
 
-Vector2 gPaddleDrawScale = { 100.0f, 70.0f };
-Vector2 gPaddleCollisionScale = { 70.0f, 100.0f };
+Vector2 gPaddleDrawScale = {100.0f, 70.0f};
+Vector2 gPaddleCollisionScale = {70.0f, 100.0f};
 
 // Ball Info
 int gBallCount = 1;
 Vector2 gBallPositions[MAX_BALLS];
-Vector2 gBallMovements[MAX_BALLS] = {
-    { 300.0f, 180.0f },
-    { -300.0f, -140.0f },
-    { 320.0f, 120.0f },
-    { -280.0f, 200.0f },
-    { 340.0f, -180.0f }
-};
-Vector2 gBallScale = { 58.0f, 62.0f };
+constexpr Vector2 BALL_START_MOVEMENTS[MAX_BALLS] = {
+    {300.0f, 180.0f},
+    {-300.0f, -140.0f},
+    {320.0f, 120.0f},
+    {-280.0f, 200.0f},
+    {340.0f, -180.0f}};
+Vector2 gBallMovements[MAX_BALLS];
+Vector2 gBallScale = {58.0f, 62.0f};
 
 // Texture Setup
 Texture2D gLeftPaddleTexture;
@@ -76,8 +77,9 @@ Texture2D gBallTexture;
 Texture2D gBackgroundTexture;
 Texture2D gCenterLineTexture;
 Texture2D gScoreSheetTexture;
+Texture2D gEndScreenTexture;
 
-// Function declarations 
+// Function declarations
 void initialise();
 void processInput();
 void update();
@@ -85,6 +87,10 @@ void render();
 void shutdown();
 void setBallCount(int ballCount);
 void drawScore(int score, float xPosition);
+void restartGame();
+void drawEndMessage(float sourceX, float sourceY, float sourceWidth,
+                    float sourceHeight, float destinationY,
+                    float destinationWidth, float destinationHeight);
 
 void drawTexture(const Texture2D *texture, const Vector2 *position,
                  const Vector2 *scale, float rotation);
@@ -96,7 +102,7 @@ void initialise()
 {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Space Pong");
 
-    // Load textures 
+    // Load textures
     gLeftPaddleTexture = LoadTexture(LEFT_PADDLE_IMAGE);
     gRightPaddleTexture = LoadTexture(RIGHT_PADDLE_IMAGE);
 
@@ -105,6 +111,7 @@ void initialise()
     gBackgroundTexture = LoadTexture(BACKGROUND_IMAGE);
     gCenterLineTexture = LoadTexture(CENTER_LINE_IMAGE);
     gScoreSheetTexture = LoadTexture(SCORE_SHEET_IMAGE);
+    gEndScreenTexture = LoadTexture(END_SCREEN_IMAGE);
 
     setBallCount(gBallCount);
 
@@ -126,27 +133,42 @@ void processInput()
     }
 
     // Ignore gameplay input after the winning score
-    if (gGameOver) return;
+    if (gGameOver)
+    {
+        // R starts a new match with the current ball count and paddle mode
+        if (IsKeyPressed(KEY_R))
+            restartGame();
+        return;
+    }
 
     // T switches the right paddle between the second player and the bot.
-    if (IsKeyPressed(KEY_T)) gRightPaddleIsBot = !gRightPaddleIsBot;
+    if (IsKeyPressed(KEY_T))
+        gRightPaddleIsBot = !gRightPaddleIsBot;
 
     // Choose how number of balls, setBallCount also places them on screen.
-    if (IsKeyPressed(KEY_ONE)) setBallCount(1);
-    else if (IsKeyPressed(KEY_TWO)) setBallCount(2);
-    else if (IsKeyPressed(KEY_THREE)) setBallCount(3);
-    else if (IsKeyPressed(KEY_FOUR)) setBallCount(4);
-    else if (IsKeyPressed(KEY_FIVE)) setBallCount(5);
+    if (IsKeyPressed(KEY_ONE))
+        setBallCount(1);
+    else if (IsKeyPressed(KEY_TWO))
+        setBallCount(2);
+    else if (IsKeyPressed(KEY_THREE))
+        setBallCount(3);
+    else if (IsKeyPressed(KEY_FOUR))
+        setBallCount(4);
+    else if (IsKeyPressed(KEY_FIVE))
+        setBallCount(5);
 
-    if (IsKeyDown(KEY_W)) gLeftPaddleMovement = -1.0f;
-    else if (IsKeyDown(KEY_S)) gLeftPaddleMovement = 1.0f;
+    if (IsKeyDown(KEY_W))
+        gLeftPaddleMovement = -1.0f;
+    else if (IsKeyDown(KEY_S))
+        gLeftPaddleMovement = 1.0f;
 
     if (!gRightPaddleIsBot)
     {
-        if (IsKeyDown(KEY_UP)) gRightPaddleMovement = -1.0f;
-        else if (IsKeyDown(KEY_DOWN)) gRightPaddleMovement = 1.0f;
+        if (IsKeyDown(KEY_UP))
+            gRightPaddleMovement = -1.0f;
+        else if (IsKeyDown(KEY_DOWN))
+            gRightPaddleMovement = 1.0f;
     }
-
 }
 
 void update()
@@ -158,9 +180,9 @@ void update()
     // Set the game over state where assets are frozen
     if (gGameOver)
     {
-        gBallCount = 1;
-        gBallPositions[0] = { SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f };
-        gBallMovements[0] = { 0.0f, 0.0f };
+        // Freeze one ball while retaining the selected count for a restart
+        gBallPositions[0] = {SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f};
+        gBallMovements[0] = {0.0f, 0.0f};
         gLeftPaddleMovement = 0.0f;
         gRightPaddleMovement = 0.0f;
 
@@ -183,21 +205,23 @@ void update()
     if (gLeftPaddlePosition.y > SCREEN_HEIGHT - gPaddleCollisionScale.y / 2.0f)
         gLeftPaddlePosition.y = SCREEN_HEIGHT - gPaddleCollisionScale.y / 2.0f;
 
-    // Keep right paddle from moving off the top edge of the screen 
+    // Keep right paddle from moving off the top edge of the screen
     if (gRightPaddlePosition.y < gPaddleCollisionScale.y / 2.0f)
     {
         gRightPaddlePosition.y = gPaddleCollisionScale.y / 2.0f;
         // Bounce the bot downward if it hits the top edge
-        if (gRightPaddleIsBot) gRightBotMovement = 1.0f;
+        if (gRightPaddleIsBot)
+            gRightBotMovement = 1.0f;
     }
 
-    // Keep right paddle from moving off the bottom edge of the screen 
+    // Keep right paddle from moving off the bottom edge of the screen
     if (gRightPaddlePosition.y > SCREEN_HEIGHT - gPaddleCollisionScale.y / 2.0f)
     {
         gRightPaddlePosition.y = SCREEN_HEIGHT - gPaddleCollisionScale.y / 2.0f;
-        
+
         // Bounce the bot upward if it hits the bottom edge
-        if (gRightPaddleIsBot) gRightBotMovement = -1.0f;
+        if (gRightPaddleIsBot)
+            gRightBotMovement = -1.0f;
     }
 
     // Update active balls and each one moves and collides independently
@@ -221,14 +245,14 @@ void update()
         // Check the paddle in the direction the  ball is traveling
         if (gBallMovements[i].x < 0.0f &&
             isColliding(&gBallPositions[i], &gBallScale,
-            &gLeftPaddlePosition, &gPaddleCollisionScale))
+                        &gLeftPaddlePosition, &gPaddleCollisionScale))
         {
             gBallPositions[i].x = gLeftPaddlePosition.x + (gPaddleCollisionScale.x + gBallScale.x) / 2.0f;
             gBallMovements[i].x = fabs(gBallMovements[i].x);
         }
         else if (gBallMovements[i].x > 0.0f &&
                  isColliding(&gBallPositions[i], &gBallScale,
-                &gRightPaddlePosition, &gPaddleCollisionScale))
+                             &gRightPaddlePosition, &gPaddleCollisionScale))
         {
             gBallPositions[i].x = gRightPaddlePosition.x - (gPaddleCollisionScale.x + gBallScale.x) / 2.0f;
             gBallMovements[i].x = -fabs(gBallMovements[i].x);
@@ -251,7 +275,7 @@ void update()
         }
         else if (gBallPositions[i].x > SCREEN_WIDTH + gBallScale.x / 2.0f)
         {
-          
+
             gLeftScore++;
 
             gBallPositions[i].x = SCREEN_WIDTH / 2.0f;
@@ -265,14 +289,13 @@ void update()
             }
         }
     }
-
 }
 
 void render()
 {
 
     // Background render
-    Vector2 backgroundPosition = { SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f };
+    Vector2 backgroundPosition = {SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f};
     Vector2 backgroundScale = {
 
         static_cast<float>(SCREEN_WIDTH),
@@ -281,8 +304,8 @@ void render()
     };
 
     // Center line render
-    Vector2 centerLinePosition = { SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f };
-    Vector2 centerLineScale = { 12.0f, SCREEN_HEIGHT - 10.0f };
+    Vector2 centerLinePosition = {SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f};
+    Vector2 centerLineScale = {12.0f, SCREEN_HEIGHT - 10.0f};
 
     BeginDrawing();
     ClearBackground(BLACK);
@@ -293,6 +316,22 @@ void render()
 
     drawScore(gLeftScore, SCREEN_WIDTH / 4.0f);
     drawScore(gRightScore, SCREEN_WIDTH * 3.0f / 4.0f);
+
+    if (gGameOver)
+    {
+        // Show the end message
+        drawTexture(&gBallTexture, &gBallPositions[0], &gBallScale, 0.0f);
+
+        if (gLeftScore >= gWinningScore)
+            drawEndMessage(140.0f, 0.0f, 400.0f, 105.0f, 115.0f, 420.0f, 110.0f);
+        else
+            drawEndMessage(0.0f, 135.0f, 677.0f, 109.0f, 240.0f, 650.0f, 105.0f);
+
+        drawEndMessage(0.0f, 284.0f, 677.0f, 85.0f, 355.0f, 650.0f, 82.0f);
+
+        EndDrawing();
+        return;
+    }
 
     drawTexture(&gLeftPaddleTexture, &gLeftPaddlePosition, &gPaddleDrawScale, 270.0f);
     drawTexture(&gRightPaddleTexture, &gRightPaddlePosition, &gPaddleDrawScale, 180.0f);
@@ -305,13 +344,14 @@ void render()
 
 void shutdown()
 {
-    //Unload assets to prevent memory leak
+    // Unload assets to prevent memory leak
     UnloadTexture(gLeftPaddleTexture);
     UnloadTexture(gRightPaddleTexture);
     UnloadTexture(gBallTexture);
     UnloadTexture(gBackgroundTexture);
     UnloadTexture(gCenterLineTexture);
     UnloadTexture(gScoreSheetTexture);
+    UnloadTexture(gEndScreenTexture);
     CloseWindow();
 }
 
@@ -328,9 +368,51 @@ void setBallCount(int ballCount)
     for (int i = 0; i < gBallCount; i++)
     {
         gBallPositions[i].x = SCREEN_WIDTH / 2.0f;
+        gBallMovements[i] = BALL_START_MOVEMENTS[i];
         // Spread the  balls vertically around the line for visibility.
         gBallPositions[i].y = SCREEN_HEIGHT / 2.0f + (i - (gBallCount - 1) / 2.0f) * 75.0f;
     }
+}
+
+void restartGame()
+{
+    // Reset the match while keeping the selected ball count and bot mode
+    setBallCount(gBallCount);
+    gLeftPaddlePosition.y = SCREEN_HEIGHT / 2.0f;
+    gRightPaddlePosition.y = SCREEN_HEIGHT / 2.0f;
+    gLeftPaddleMovement = 0.0f;
+    gRightPaddleMovement = 0.0f;
+    gRightBotMovement = -1.0f;
+}
+
+// Draw the end message using end screen sprite
+void drawEndMessage(float sourceX, float sourceY, float sourceWidth,
+                    float sourceHeight, float destinationY,
+                    float destinationWidth, float destinationHeight)
+{
+    Rectangle sourceArea = {
+        sourceX,
+        sourceY,
+        sourceWidth,
+        sourceHeight};
+
+    Rectangle destinationArea = {
+        SCREEN_WIDTH / 2.0f,
+        destinationY,
+        destinationWidth,
+        destinationHeight};
+
+    Vector2 originOffset = {
+        destinationWidth / 2.0f,
+        destinationHeight / 2.0f};
+
+    DrawTexturePro(
+        gEndScreenTexture,
+        sourceArea,
+        destinationArea,
+        originOffset,
+        0.0f,
+        WHITE);
 }
 
 // Draw the score using score sprite sheet
@@ -342,17 +424,15 @@ void drawScore(int score, float xPosition)
         spriteWidth * score,
         168.0f,
         spriteWidth,
-        34.0f
-    };
+        34.0f};
 
     Rectangle destinationArea = {
         xPosition,
         34.0f,
         54.0f,
-        48.0f
-    };
+        48.0f};
 
-    Vector2 originOffset = { 27.0f, 24.0f };
+    Vector2 originOffset = {27.0f, 24.0f};
 
     DrawTexturePro(
         gScoreSheetTexture,
@@ -360,8 +440,7 @@ void drawScore(int score, float xPosition)
         destinationArea,
         originOffset,
         0.0f,
-        WHITE
-    );
+        WHITE);
 }
 
 // Draw texture function for organization and to avoid code duplication
@@ -372,17 +451,15 @@ void drawTexture(const Texture2D *texture, const Vector2 *position,
     Rectangle textureArea = {
         0.0f, 0.0f,
         static_cast<float>(texture->width),
-        static_cast<float>(texture->height)
-    };
+        static_cast<float>(texture->height)};
 
     Rectangle destinationArea = {
         position->x,
         position->y,
         scale->x,
-        scale->y
-    };
+        scale->y};
 
-    Vector2 originOffset = { scale->x / 2.0f, scale->y / 2.0f };
+    Vector2 originOffset = {scale->x / 2.0f, scale->y / 2.0f};
 
     DrawTexturePro(
         *texture,
@@ -390,23 +467,21 @@ void drawTexture(const Texture2D *texture, const Vector2 *position,
         destinationArea,
         originOffset,
         rotation,
-        WHITE
-    );
-
+        WHITE);
 }
-
 
 // Check for collision between two objects
 bool isColliding(const Vector2 *positionA, const Vector2 *scaleA,
                  const Vector2 *positionB, const Vector2 *scaleB)
 {
-    float xDistance = 
-    fabs(positionA->x - positionB->x) - ((scaleA->x + scaleB->x) / 2.0f);
+    float xDistance =
+        fabs(positionA->x - positionB->x) - ((scaleA->x + scaleB->x) / 2.0f);
 
-    float yDistance = 
-    fabs(positionA->y - positionB->y) - ((scaleA->y + scaleB->y) / 2.0f);
+    float yDistance =
+        fabs(positionA->y - positionB->y) - ((scaleA->y + scaleB->y) / 2.0f);
 
-    if (xDistance < 0.0f && yDistance < 0.0f) return true;
+    if (xDistance < 0.0f && yDistance < 0.0f)
+        return true;
 
     return false;
 }
